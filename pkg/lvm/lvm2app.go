@@ -300,19 +300,31 @@ func (handle *LibHandle) ValidateTag(tag string) error {
 	return nil
 }
 
+type VolumeGroupOpt func(handle *LibHandle, vg *VolumeGroup) error
+
+// Tag the volume group with a given tag.
+func VolumeGroupTag(tag string) VolumeGroupOpt {
+	return func(handle *LibHandle, vg *VolumeGroup) error {
+		if err := handle.ValidateTag(tag); err != nil {
+			return err
+		}
+		ctag := C.CString(tag)
+		defer C.free(unsafe.Pointer(ctag))
+		rc := C.lvm_vg_add_tag(vg.vg, ctag)
+		if rc != 0 {
+			return handle.err()
+		}
+		return nil
+	}
+}
+
 // CreateVolumeGroup creates a new volume group.
-func (handle *LibHandle) CreateVolumeGroup(name string, pvs []*PhysicalVolume, tags []string) (*VolumeGroup, error) {
+func (handle *LibHandle) CreateVolumeGroup(name string, pvs []*PhysicalVolume, opts ...VolumeGroupOpt) (*VolumeGroup, error) {
 	handle.lk.Lock()
 	defer handle.lk.Unlock()
 	// Validate the volume group name.
 	if err := handle.validateVolumeGroupName(name); err != nil {
 		return nil, err
-	}
-	// Validate the tags.
-	for _, tag := range tags {
-		if err := handle.ValidateTag(tag); err != nil {
-			return nil, err
-		}
 	}
 	// Create the volume group memory object.
 	cname := C.CString(name)
@@ -324,13 +336,9 @@ func (handle *LibHandle) CreateVolumeGroup(name string, pvs []*PhysicalVolume, t
 	vg := &VolumeGroup{name, cvg, handle}
 	defer vg.close()
 
-	// Tag the volume group
-	for _, tag := range tags {
-		ctag := C.CString(tag)
-		rc := C.lvm_vg_add_tag(cvg, ctag)
-		C.free(unsafe.Pointer(ctag))
-		if rc != 0 {
-			return nil, handle.err()
+	for _, opt := range opts {
+		if err := opt(handle, vg); err != nil {
+			return nil, err
 		}
 	}
 
@@ -860,8 +868,8 @@ func Scan() error {
 func CreateVolumeGroup(
 	name string,
 	pvs []*PhysicalVolume,
-	tags []string) (*VolumeGroup, error) {
-	return defaultHandle.CreateVolumeGroup(name, pvs, tags)
+	opts ...VolumeGroupOpt) (*VolumeGroup, error) {
+	return defaultHandle.CreateVolumeGroup(name, pvs, opts...)
 }
 
 // ValidateTag validates a tag.
