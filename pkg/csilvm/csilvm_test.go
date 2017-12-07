@@ -2030,7 +2030,7 @@ func TestNodeProbe_NewVolumeGroup_NewPhysicalVolumes_WithMalformedTag(t *testing
 	defer pv2.Remove()
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, nil)
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs)
 	if err != nil {
 		panic(err)
 	}
@@ -2211,7 +2211,7 @@ func TestNodeProbe_ExistingVolumeGroup(t *testing.T) {
 	defer pv2.Remove()
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, nil)
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs)
 	if err != nil {
 		panic(err)
 	}
@@ -2248,7 +2248,7 @@ func TestNodeProbe_ExistingVolumeGroup_MissingPhysicalVolume(t *testing.T) {
 	defer pv2.Remove()
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, nil)
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs)
 	if err != nil {
 		panic(err)
 	}
@@ -2288,7 +2288,7 @@ func TestNodeProbe_ExistingVolumeGroup_UnexpectedExtraPhysicalVolume(t *testing.
 	defer pv2.Remove()
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, nil)
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs)
 	if err != nil {
 		panic(err)
 	}
@@ -2329,7 +2329,7 @@ func TestNodeProbe_ExistingVolumeGroup_RemoveVolumeGroup(t *testing.T) {
 	defer pv2.Remove()
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, nil)
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs)
 	if err != nil {
 		panic(err)
 	}
@@ -2384,7 +2384,7 @@ func TestNodeProbe_ExistingVolumeGroup_UnexpectedExtraPhysicalVolume_RemoveVolum
 	defer pv2.Remove()
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, nil)
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs)
 	if err != nil {
 		panic(err)
 	}
@@ -2426,7 +2426,11 @@ func TestProbeNode_ExistingVolumeGroup_WithTag(t *testing.T) {
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
 	tags := []string{"blue", "foo"}
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, tags)
+	var opts []lvm.VolumeGroupOpt
+	for _, tag := range tags {
+		opts = append(opts, lvm.VolumeGroupTag(tag))
+	}
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs, opts...)
 	if err != nil {
 		panic(err)
 	}
@@ -2464,7 +2468,9 @@ func TestProbeNode_ExistingVolumeGroup_UnexpectedTag(t *testing.T) {
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
 	tag := "blue"
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, []string{tag})
+	var opts []lvm.VolumeGroupOpt
+	opts = append(opts, lvm.VolumeGroupTag(tag))
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs, opts...)
 	if err != nil {
 		panic(err)
 	}
@@ -2505,13 +2511,16 @@ func TestProbeNode_ExistingVolumeGroup_MissingTag(t *testing.T) {
 	defer pv2.Remove()
 	pvs := []*lvm.PhysicalVolume{pv1, pv2}
 	vgname := "test-vg-" + uuid.New().String()
-	vg, err := lvm.CreateVolumeGroup(vgname, pvs, []string{"some-other-tag"})
+	tag := "some-other-tag"
+	var opts []lvm.VolumeGroupOpt
+	opts = append(opts, lvm.VolumeGroupTag(tag))
+	vg, err := lvm.CreateVolumeGroup(vgname, pvs, opts...)
 	if err != nil {
 		panic(err)
 	}
 	defer vg.Remove()
 	pvnames := []string{loop1.Path(), loop2.Path()}
-	tag := "blue"
+	tag = "blue"
 	client, clean := prepareNodeProbeTest(vgname, pvnames, Tag(tag))
 	defer clean()
 	_, err = client.NodeProbe(context.Background(), testNodeProbeRequest())

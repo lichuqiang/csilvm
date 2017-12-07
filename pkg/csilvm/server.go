@@ -967,7 +967,11 @@ func (s *Server) NodeProbe(
 				pvname, err)
 		}
 		log.Printf("Creating volume group %v with physical volumes %v and tags %v", s.vgname, s.pvnames, s.tags)
-		volumeGroup, err = lvm.CreateVolumeGroup(s.vgname, pvs, s.tags)
+		var opts []lvm.VolumeGroupOpt
+		for _, tag := range s.tags {
+			opts = append(opts, lvm.VolumeGroupTag(tag))
+		}
+		volumeGroup, err = lvm.CreateVolumeGroup(s.vgname, pvs, opts...)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.FailedPrecondition,
