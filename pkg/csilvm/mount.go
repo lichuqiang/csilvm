@@ -14,6 +14,10 @@ This file contains lines of the form:
 36 35 98:0 /mnt1 /mnt2 rw,noatime master:1 - ext3 /dev/root rw,errors=continue
 (1)(2)(3)   (4)   (5)      (6)      (7)   (8) (9)   (10)         (11)
 
+753 883 253:13 /   /tmp/foo rw,relatime -   xfs   /dev/bar     rw,seclabel,attr2,inode64,noquota
+(1) (2) (3)    (4) (5)      (6)  (no 7) (8) (9)   (10)         (11)
+
+
 (1) mount ID:  unique identifier of the mount (may be reused after umount)
 (2) parent ID:  ID of parent (or of self for the top of the mount tree)
 (3) major:minor:  value of st_dev for files on filesystem
@@ -46,6 +50,14 @@ func (m *mountpoint) isReadonly() bool {
 	return false
 }
 
+type simpleError string
+
+func (s simpleError) Error() string {
+	return string(s)
+}
+
+const ErrParseMountinfo = simpleError("csilvm: cannot parse /proc/self/mountinfo")
+
 func listMounts() (mounts []mountpoint, err error) {
 	buf, err := ioutil.ReadFile("/proc/self/mountinfo")
 	if err != nil {
@@ -56,12 +68,22 @@ func listMounts() (mounts []mountpoint, err error) {
 			continue
 		}
 		fields := strings.Fields(line)
+		seperatorIdx := 0
+		for ii := 6; ii < len(fields); ii++ {
+			const seperator = "-"
+			if fields[ii] == seperator {
+				seperatorIdx = ii
+			}
+		}
+		if seperatorIdx == 0 {
+			return nil, ErrParseMountinfo
+		}
 		mount := mountpoint{
 			root:        fields[3],
 			path:        fields[4],
-			fstype:      fields[8],
+			fstype:      fields[seperatorIdx+1],
 			mountopts:   strings.Split(fields[5], ","),
-			mountsource: fields[9],
+			mountsource: fields[seperatorIdx+2],
 		}
 		mounts = append(mounts, mount)
 	}
