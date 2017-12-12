@@ -2051,6 +2051,11 @@ func TestNodeProbe_NewVolumeGroup_NewPhysicalVolumes_WithMalformedTag(t *testing
 }
 
 func TestNodeProbe_NewVolumeGroup_NonExistantPhysicalVolume(t *testing.T) {
+	t.Skip("There is some bug in liblvm that is triggered by" +
+		"ListPhysicalVolumes followed by a device being created, formatted and" +
+		"mounted, then passed to CreatePhysicalVolume: the volume is not found." +
+		"This causes this test to interfere with" +
+		"TestNodeProbe_NewVolumeGroup_BusyPhysicalVolume.")
 	pvnames := []string{"/dev/does/not/exist"}
 	vgname := "test-vg-" + uuid.New().String()
 	client, clean := prepareNodeProbeTest(vgname, pvnames)
