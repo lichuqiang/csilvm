@@ -11,7 +11,7 @@ import (
 )
 
 /*
-#cgo LDFLAGS: -llvm2app -ldevmapper
+#cgo LDFLAGS: -llvm2app -llvm2cmd -ldevmapper
 #cgo CFLAGS: -Wno-implicit-function-declaration
 #include <stdlib.h>
 #include <lvm2app.h>
