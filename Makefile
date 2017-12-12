@@ -30,13 +30,13 @@ dev-image:
 ifeq ($(DOCKER), yes)
 TEST_PREFIX := docker run --rm $(DEV_DOCKER_IMAGE)
 BUILD_PREFIX := docker run --rm -v `pwd`:/go/src/github.com/mesosphere/csilvm $(DEV_DOCKER_IMAGE)
+PRIVILEGED_BUILD_PREFIX := docker run --rm --ipc=host --privileged -v /run:/run -v /tmp:/tmp --net=host -v /dev:/dev -ti -v `pwd`:/go/src/github.com/mesosphere/csilvm $(DEV_DOCKER_IMAGE)
 
 build: dev-image
 check: dev-image
 gofmt: dev-image
-
+sudo-test: dev-image
 shell: dev-image
-	docker run --rm -ti -v `pwd`:/go/src/github.com/mesosphere/csilvm $(DEV_DOCKER_IMAGE) /bin/bash
 endif
 
 check:
@@ -53,7 +53,8 @@ all: build
 
 .PHONY: sudo-test
 sudo-test:
-	go test -c -i ./pkg/lvm
-	sudo ./lvm.test -test.v
-	go test -c -i ./pkg/csilvm
-	sudo ./csilvm.test -test.v
+	$(PRIVILEGED_BUILD_PREFIX) sh -c "go test -c -i ./pkg/lvm && ./lvm.test -test.v"
+	$(PRIVILEGED_BUILD_PREFIX) sh -c "go test -c -i ./pkg/csilvm && ./csilvm.test -test.v"
+
+shell:
+	$(PRIVILEGED_BUILD_PREFIX) /bin/bash
