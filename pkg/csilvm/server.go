@@ -804,7 +804,7 @@ func determineFilesystemType(devicePath string) (string, error) {
 }
 
 func formatDevice(devicePath, fstype string) error {
-	output, err := exec.Command("mkfs", "-t", fstype, devicePath).CombinedOutput()
+	output, err := exec.Command("/sbin/mkfs", "-t", fstype, devicePath).CombinedOutput()
 	if err != nil {
 		return errors.New("csilvm: formatDevice: " + string(output))
 	}
